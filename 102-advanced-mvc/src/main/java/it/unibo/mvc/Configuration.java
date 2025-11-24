@@ -1,5 +1,10 @@
 package it.unibo.mvc;
 
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 
 /**
  * Encapsulates the concept of configuration.
@@ -63,13 +68,12 @@ public final class Configuration {
      */
     public static class Builder {
 
-        private static final int MIN = 0;
-        private static final int MAX = 100;
-        private static final int ATTEMPTS = 10;
-
-        private int min = MIN;
-        private int max = MAX;
-        private int attempts = ATTEMPTS;
+        private int min;
+        private int max;
+        private int attempts;
+        private boolean hasMin = false;
+        private boolean hasMax = false;
+        private boolean hasAttempts = false;
         private boolean consumed = false;
 
         /**
@@ -102,12 +106,39 @@ public final class Configuration {
         /**
          * @return a configuration
          */
-        public final Configuration build() {
+        public final Configuration build(final File f) throws IOException{
             if (consumed) {
-                throw new IllegalStateException("The builder can only be used once");
+                throw new IOException("The builder can only be used once");
             }
             consumed = true;
-            return new Configuration(max, min, attempts);
+            try (BufferedReader reader = Files.newBufferedReader(f.toPath(), StandardCharsets.UTF_8)) {
+                String line;
+                while((line = reader.readLine()) != null) {
+                    String[] parts = line.split(":");
+                    switch(parts[0].trim()) {
+                        case "minimum": 
+                            min = Integer.parseInt(parts[1].trim());
+                            hasMin = true;
+                            break;
+                        case "maximum": 
+                            max = Integer.parseInt(parts[1].trim());
+                            hasMax = true;
+                            break;
+                        case "attempts":
+                            attempts = Integer.parseInt(parts[1].trim());
+                            hasAttempts = true;
+                            break;
+                        default: throw new IOException("The string read is not a valid input");
+                    }
+                }
+            } catch (final IOException e) {
+                throw new IOException("Couldn't read the input file");
+            }
+            if(hasAttempts && hasMax && hasMin){
+                return new Configuration(max, min, attempts);
+            } else {
+                throw new IOException("Couldn't create a configuration because of incomplete config file");
+            }
         }
     }
 }
