@@ -1,15 +1,14 @@
 package it.unibo.mvc;
 
+import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 
 /**
  */
-public final class DrawNumberApp implements DrawNumberViewObserver {
-    private static final int MIN = 0;
-    private static final int MAX = 100;
-    private static final int ATTEMPTS = 10;
+public final class DrawNumberApp implements DrawNumberViewObserver { 
 
     private final DrawNumber model;
     private final List<DrawNumberView> views;
@@ -18,7 +17,7 @@ public final class DrawNumberApp implements DrawNumberViewObserver {
      * @param views
      *            the views to attach
      */
-    public DrawNumberApp(final DrawNumberView... views) {
+    public DrawNumberApp(final DrawNumberView... views) throws IOException{
         /*
          * Side-effect proof
          */
@@ -27,7 +26,15 @@ public final class DrawNumberApp implements DrawNumberViewObserver {
             view.setObserver(this);
             view.start();
         }
-        this.model = new DrawNumberImpl(MIN, MAX, ATTEMPTS);
+        Configuration config;
+        try {
+            File configFile = new File("src/main/resources/config.yml");
+            config = new Configuration.Builder().build(configFile);
+            this.model = new DrawNumberImpl(config.getMin(), config.getMax(), config.getAttempts());
+        } catch (IOException e) {
+            throw new IOException("Couldn't find the configuration file");
+        }
+        
     }
 
     @Override
@@ -65,8 +72,11 @@ public final class DrawNumberApp implements DrawNumberViewObserver {
      *            ignored
      * @throws FileNotFoundException 
      */
-    public static void main(final String... args) throws FileNotFoundException {
-        new DrawNumberApp(new DrawNumberViewImpl());
+    public static void main(final String... args) throws IOException {
+        DrawNumberViewImpl gui1 = new DrawNumberViewImpl();
+        DrawNumberViewImpl gui2 = new DrawNumberViewImpl();
+        PrintStreamView gui3 = new PrintStreamView(System.out);
+        PrintStreamView gui4 = new PrintStreamView("log.txt");
+        new DrawNumberApp(gui1, gui2, gui3, gui4);
     }
-
 }
